@@ -1,6 +1,12 @@
 package com.example.demo.controllers;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import com.example.demo.Util.Respuesta;
 import com.example.demo.models.Usuario;
@@ -10,6 +16,10 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/usuario")
 public class UsuarioController {
+
+    @PersistenceContext
+    private EntityManager em;
+
     @Autowired
     UsuarioService usuarioService;
 
@@ -80,6 +90,41 @@ public class UsuarioController {
             this.usuarioService.save(usuario);
             respuesta.setEstado(true);
             respuesta.setMensaje("Usuario Registrado correctamente");
+        } catch (Exception e) {
+            respuesta.setEstado(false);
+            respuesta.setMensaje("Error al registrar usuario");
+            e.printStackTrace();
+        }
+        return respuesta;
+    }
+
+    /**
+     * Servicio que valida el logueo de un usuario a travez de usuario(cedula) y
+     * password
+     * 
+     * @endpoint //http://localhost:8090/usuario/login
+     * @param usuario
+     * @return Respuesta
+     */
+    @PostMapping("/login")
+    public Respuesta login(@RequestBody Usuario usuario) {
+        respuesta = new Respuesta();
+        try {
+            Query queryUsuario = em.createNamedQuery("login");
+            String passwordMD5 = this.usuarioService.encriptarPassword(usuario.getPassword());
+            List<Usuario> usu = queryUsuario.setParameter("cedula", usuario.getCedula())
+                    .setParameter("password", passwordMD5).getResultList();
+
+            if (usu.size() > 0) {
+                Usuario result = usu.get(0);
+                respuesta.setEstado(true);
+                respuesta.setMensaje("Usuario Registrado correctamente");
+                respuesta.setData(this.usuarioService.getById(result.getId()));
+            } else {
+                respuesta.setEstado(false);
+                respuesta.setMensaje("No existe usuario");
+            }
+
         } catch (Exception e) {
             respuesta.setEstado(false);
             respuesta.setMensaje("Error al registrar usuario");
